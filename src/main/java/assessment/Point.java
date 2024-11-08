@@ -1,5 +1,7 @@
 package assessment;
 
+import java.util.Objects;
+
 public class Point implements Comparable<Point> {
 
     final int x;
@@ -15,5 +17,24 @@ public class Point implements Comparable<Point> {
     @Override
     public int compareTo(Point that) {
         return -Double.compare(this.value, that.value);
+    }
+
+    @Override
+    public String toString() {
+//        return "(" + x + "," + y + ")";
+        return "(" + x + "," + y + ":" + value + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Point point = (Point) o;
+        return x == point.x && y == point.y;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y);
     }
 }
