@@ -12,19 +12,19 @@ import java.util.*;
  */
 public class OptimalPathFinder {
 
-    // paths to be considered
+    // paths to be considered, sorted by value
     private final PriorityQueue<Path> paths = new PriorityQueue<>();
 
     private final Set<Path> takenPaths = new HashSet<>();
 
     /**
-     * @param g het Grid (vierkant)
-     * @param N grootte van het Grid
-     * @param t totaal aantal discrete tijdstappen
-     * @param T maximale tijdsduur
-     * @param x startpositie X
-     * @param y startpositie Y
-     * @return het meest waardevolle pad
+     * @param g square grid
+     * @param N size of grid
+     * @param t total number of discrete timesteps
+     * @param T max algorithm elapsed time
+     * @param x start position X
+     * @param y start position Y
+     * @return most valuable path (points and value)
      */
     public Path findOptimalPath(Grid g, int N, int t, long T, int x, int y) {
         Path path = Path.newPath(g, Point.create(g, x, y));
@@ -41,20 +41,19 @@ public class OptimalPathFinder {
             // take current highest ranking path
             path = paths.peek();
             assert path != null;
+
             while (path.length() >= t) {
-                // dit pad heeft lengte t bereikt, we kunnen niet verder
+                // path has reached max length, evict
                 paths.poll();
                 // meer waarde dan de huidige max ?
                 if (path.value() > max.value()) {
                     max = path;
                 }
 
-                // pak de volgende
+                // next path to evaluate
                 path = paths.peek();
             }
 
-//            System.out.println("paths:" + paths.size());
-//            System.out.println("CUR: " + path);
             Point currentPos = path.getHead();
             x = currentPos.x;
             y = currentPos.y;
