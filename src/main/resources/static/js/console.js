@@ -3,14 +3,86 @@ const command_history_element = document.getElementById('command_history');
 let command_history = [''];
 let command_history_index = 0;
 let token_index = 0;
-const bindings = {};
-const state = {};
+const bindings = {
+    "N": {
+        is_binding: true,
+        name: "N",
+    },
+    "t": {
+        is_binding: true,
+        name: "t",
+    },
+    "T": {
+        is_binding: true,
+        name: "T",
+    },
+    "x": {
+        is_binding: true,
+        name: "x",
+    },
+    "y": {
+        is_binding: true,
+        name: "y",
+    },
+    "color": {
+        is_binding: true,
+        name: "color",
+    }
+
+};
+const state = {
+    "N": 100,
+    "t": 50,
+    "T": 1000,
+    "x": 50,
+    "y": 50,
+    color: "red",
+};
+// const slider = document.getElementById('slider');
+const console_element = document.getElementById('console');
+let slider_start_Y, slider_start_height;
+clear();
+
+const fly = function () {
+    let N = state['N'];
+    let t = state['t'];
+    let T = state['T'];
+    let x = state['x'];
+    let y = state['y'];
+
+    fetch(`/api/path/${N}/${t}/${T}/${x}/${y}`, {
+        method: 'GET'
+    }).then((response) => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Server response wasn\'t OK');
+        }
+    }).then(path => {
+        const canvasElement = document.getElementById("gridCanvas");
+        const canvas = canvasElement.getContext('2d');
+        const factor = 1000 / N;
+        canvas.beginPath();
+        canvas.moveTo(7 + path.points[0].x * factor, 2 + path.points[0].y * factor);
+        for (let i = 1; i < path.points.length; i++) {
+            canvas.lineTo(8 + path.points[i].x * factor, 5 + path.points[i].y * factor);
+        }
+        canvas.strokeStyle = state['color'];
+        canvas.stroke();
+        command_history_element.innerText += `${path.value}\n`;
+    }).catch((err) => {
+        console.log('Fetching failed', err);
+    });
+}
+
 const keywords = {
     'true': true,
     'false': false,
     'pi': Math.PI,
     'PI': Math.PI,
-    'e': Math.E
+    'e': Math.E,
+    'fly': fly,
+    'clear': clear,
 }
 
 let tokens;
@@ -24,12 +96,6 @@ const adjust_input_element_height = function () {
         command_input_element.setAttribute('class', 'single_line');
     }
 }
-
-// command_input_element.onkeypress = function handle_key_input(event) {
-//     if (event.key === 'Enter') {
-//         event.preventDefault();
-//     }
-// }
 
 command_input_element.onkeyup = function handle_key_input(event) {
     adjust_input_element_height();
@@ -63,7 +129,7 @@ const handle_enter = function () {
     adjust_input_element_height();
 
     if (command.length > 0) {
-        command_history_element.innerText += command + "\n";
+        command_history_element.innerText += `>${command}\n`;
         command_input_element.value = '';
         command_history_index = command_history.length;
 
@@ -72,23 +138,14 @@ const handle_enter = function () {
         let value = evaluate(statement);
 
         if (value !== undefined) {
-            let binding;
-            if (value.is_binding) {                         // if it's declaration work with the initializer
-                binding = value.name;                       // but we also need the name of the bound variable
-                value = state[value.name];                     // lookup the value for the binding
+            if (typeof value === 'function') {
+                value.apply();
+            } else {
+                if (value.is_binding) {
+                    value = state[value.name];
+                }
+                command_history_element.innerText += value.toString() + "\n";
             }
-
-            // if (value.is_visual) {
-            //
-            // } else {
-            //     if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-            //         label(bindings[binding].previous, '@' + bindings[binding].previous.id);
-            //     }
-            // }
-            // if (value.description) {
-            //     value = value.description;
-            // }
-            command_history_element.innerText += value.toString() + "\n";
             command_history.push(command);
             command_history_element.scrollTo(0, command_history_element.scrollHeight);
         }
@@ -138,6 +195,8 @@ const evaluate = function (expr) {
                     return logical_and(evaluate(expr.left), evaluate(expr.right));
                 case token_types.OR:
                     return logical_or(evaluate(expr.left), evaluate(expr.right));
+                case token_types.CIRCUMFLEX:
+                    return power(evaluate(expr.left), evaluate(expr.right));
             }
             throw {message: 'illegal binary operator'};
         }
@@ -211,7 +270,7 @@ function add_sub() {
 }
 
 function mult_div() {
-    let expr = unary();
+    let expr = pow();
 
     while (match([token_types.AND, token_types.SLASH, token_types.STAR, token_types.DOT])) {
         let operator = previous_token();
@@ -219,6 +278,17 @@ function mult_div() {
         expr = {type: 'binary', left: expr, operator: operator, right: right};
     }
 
+    return expr;
+}
+
+function pow() {
+    let expr = unary();
+
+    if (match([token_types.CIRCUMFLEX])) {
+        let operator = previous_token();
+        let right = unary();
+        expr = {type: 'binary', left: expr, operator: operator, right: right};
+    }
     return expr;
 }
 
@@ -376,6 +446,8 @@ const scan = function (command) {
                 return token_types.STAR;
             case '/':
                 return token_types.SLASH;
+            case '^':
+                return token_types.CIRCUMFLEX;
             case '>':
                 if (expect('=')) {
                     return token_types.GREATER_OR_EQUAL;
@@ -460,13 +532,6 @@ const scan = function (command) {
         return is_digit(char) || char === '.'; // no scientific notation for now
     }
 
-    function parse_reference() {
-        while (current_char() === '@' || is_digit(current_char())) {
-            advance();
-        }
-        return command.substring(word_start_index, current_index);
-    }
-
     function parse_number() {
         while (is_part_of_number(current_char())) {
             advance();
@@ -516,6 +581,7 @@ const token_types = {
     PLUS: {type: 'plus'},
     STAR: {type: 'star'},
     SLASH: {type: 'slash'},
+    CIRCUMFLEX: {type: 'circonflex'},
     EQUALS: {type: 'equals'},
     EQUALS_EQUALS: {type: 'equals_equals'},
     NOT_EQUALS: {type: 'not_equals'},
@@ -563,34 +629,6 @@ const logical_or = function (left, right) {
     return left || right;
 }
 
-const create_2d_id_matrix = function () {
-    return {
-        data: [[1, 0], [0, 1]],
-        id: index_sequence++,
-        is_visual: true,
-        is_vector: false,         // for type comparison
-        is_matrix: true,
-        type: 'matrix',          // for showing type to user
-        is_new: true,            // to determine view action
-        visible: true,
-        toString: function () {
-            return `matrix@${this.id}`;
-        },
-        hide: function () {
-            return hide(this);
-        },
-        label: function (text) {
-            return label(this, text);
-        },
-        show: function () {
-            return show(this);
-        },
-        equals: function (other) {
-            return (this.id === other.id || (this.type === other.type && this.data === other.data)); // TODO
-        },
-        row: function (index) {
-            return this.data[index];
-        }
-    }
-
+const power = function (left, right) {
+    return Math.pow(left, right);
 }

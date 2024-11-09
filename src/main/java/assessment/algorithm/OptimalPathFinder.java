@@ -99,7 +99,6 @@ public class OptimalPathFinder {
                             paths.add(newPath);
                             takenPaths.add(newPath);
                             pointsAdded = true;
-//                            System.out.println("add " + newPath);
                         }
                     }
                 }

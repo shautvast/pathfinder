@@ -14,7 +14,7 @@ public class PathFinderTest {
     @Test
     public void testBestPath100() {
         Grid grid = Grid.fromFile("grids/100.txt");
-        Path path = new OptimalPathFinder().findOptimalPath(grid, 100, 8, 10000, 50, 50);
+        Path path = new OptimalPathFinder().findOptimalPath(grid, 100, 10, 100, 50, 50);
         System.out.println(path);
     }
 
