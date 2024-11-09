@@ -45,7 +45,7 @@ public class OptimalPathFinder {
             while (path.length() >= t) {
                 // path has reached max length, evict
                 paths.poll();
-                // meer waarde dan de huidige max ?
+                // higher value than current max?
                 if (path.value() > max.value()) {
                     max = path;
                 }
