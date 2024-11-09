@@ -1,17 +1,28 @@
-package assessment;
+package assessment.algorithm;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+
 public class Point implements Comparable<Point> {
 
-    final int x;
-    final int y;
-    final double value;
+    public final int x;
+    public final int y;
+    public double value;
 
-    public Point(int x, int y, double value) {
+    private Point(int x, int y, double initialValue) {
         this.x = x;
         this.y = y;
-        this.value = value;
+        this.value = initialValue;
+    }
+
+    public static Point create(Grid g, int x, int y) {
+        return new Point(x, y, g.getInitialValue(x, y));
+    }
+
+    public static Point create(Grid g, Path p, int x, int y) {
+        return new Point(x, y, g.getCurrentValue(p, x, y));
     }
 
     @Override
@@ -37,4 +48,5 @@ public class Point implements Comparable<Point> {
     public int hashCode() {
         return Objects.hash(x, y);
     }
+
 }

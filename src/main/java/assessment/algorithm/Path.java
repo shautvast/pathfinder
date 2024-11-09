@@ -1,4 +1,4 @@
-package assessment;
+package assessment.algorithm;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -8,7 +8,7 @@ public class Path implements Comparable<Path> {
     // beide bevatten de al afgelegde punten
 
     // points is bedoeld om door de punten te lopen
-    private final ArrayList<Point> points = new ArrayList<>();
+    public final ArrayList<Point> points = new ArrayList<>();
 
     // trodden is bedoeld om zo snel mogelijk vast te stellen of we al op het punt geweest zijn
     private final HashSet<Integer> trodden = new HashSet<>();
@@ -17,9 +17,9 @@ public class Path implements Comparable<Path> {
     }
 
     // meh row/col vs x/y
-    static Path newPath(Grid g, int x, int y) {
+    public static Path newPath(Grid g, Point start) {
         Path p = new Path();
-        p.add(g, new Point(x, y, g.get(y, x)));
+        p.add(g, start);
         return p;
     }
 
@@ -28,14 +28,14 @@ public class Path implements Comparable<Path> {
         trodden.add(point.y * g.getWidth() + point.x);
     }
 
-    public Double value() {
+    public double value() {
         return points.stream().mapToDouble(point -> point.value).sum();
     }
 
     // compare descending, highest value first
     @Override
     public int compareTo(Path o) {
-        return -this.value().compareTo(o.value());
+        return -Double.compare(this.value(), o.value());
     }
 
     public int length() {

@@ -1,10 +1,16 @@
-package assessment;
+package assessment.algorithm;
 
 import java.util.*;
 
-//TODO make non static (CH)
-public class BestPathFinder {
-    private static final double timeValueFactor = .2;
+/**
+ * Finds most valuable path given distance/time covered (t) and elapsed compute time (T)
+ * for a drone moving through a square grid of size N that has cells that have varying value
+ * <p/>
+ * outstanding questions:
+ * * is a cell of (initial) value 0 equally valuable as a cell just occupied?
+ * -> probably, what is the chance that you find a 'treasure' behind it, that you would have not found via an alternative path?
+ */
+public class OptimalPathFinder {
 
     // paths to be considered
     private final PriorityQueue<Path> paths = new PriorityQueue<>();
@@ -20,8 +26,8 @@ public class BestPathFinder {
      * @param y startpositie Y
      * @return het meest waardevolle pad
      */
-    public Path findMaxValPath(Grid g, int N, int t, int T, int x, int y) {
-        Path path = Path.newPath(g, x, y);
+    public Path findOptimalPath(Grid g, int N, int t, long T, int x, int y) {
+        Path path = Path.newPath(g, Point.create(g, x, y));
         paths.add(path);
         // overall best path
         Path max = path;
@@ -56,27 +62,27 @@ public class BestPathFinder {
             // find best new directions
             List<Point> newDirections = new ArrayList<>();
             if (y > 0) {
-                newDirections.add(new Point(x, y - 1, getValueFromGrid(g, path, x, y - 1)));
+                newDirections.add(Point.create(g, path, x, y - 1));
                 if (x < N - 1) {
-                    newDirections.add(new Point(x + 1, y - 1, getValueFromGrid(g, path, x + 1, y - 1)));
+                    newDirections.add(Point.create(g, path, x + 1, y - 1));
                 }
             }
             if (x > 0) {
-                newDirections.add(new Point(x - 1, y, getValueFromGrid(g, path, x - 1, y)));
+                newDirections.add(Point.create(g, path, x - 1, y));
                 if (y > 0) {
-                    newDirections.add(new Point(x - 1, y - 1, getValueFromGrid(g, path, x - 1, y - 1)));
+                    newDirections.add(Point.create(g, path, x - 1, y - 1));
                 }
             }
             if (x < N - 1) {
-                newDirections.add(new Point(x + 1, y, getValueFromGrid(g, path, x + 1, y)));
+                newDirections.add(Point.create(g, path, x + 1, y));
                 if (y < N - 1) {
-                    newDirections.add(new Point(x + 1, y + 1, getValueFromGrid(g, path, x + 1, y + 1)));
+                    newDirections.add(Point.create(g, path, x + 1, y + 1));
                 }
             }
             if (y < N - 1) {
-                newDirections.add(new Point(x, y + 1, getValueFromGrid(g, path, x, y + 1)));
+                newDirections.add(Point.create(g, path, x, y + 1));
                 if (x > 0)
-                    newDirections.add(new Point(x - 1, y + 1, getValueFromGrid(g, path, x - 1, y + 1)));
+                    newDirections.add(Point.create(g, path, x - 1, y + 1));
             }
 
             if (!newDirections.isEmpty()) {
@@ -98,7 +104,7 @@ public class BestPathFinder {
                     }
                 }
                 if (!pointsAdded) {
-                    //evict
+                    // dead end, evict
                     Path ended = paths.poll();
                     if (ended != null && ended.value() > max.value()) {
                         max = ended;
@@ -107,23 +113,5 @@ public class BestPathFinder {
             }
         }
         return max;
-    }
-
-    /**
-     * de waarde van een punt x,y wordt bepaald door de beginwaarde, tenzij we er al geweest zijn
-     * dan telt de tijd sinds we er geweest zijn = afstand in sindsdien afgelegd pad
-     * de waarde is rechtevenredig met de afstand
-     */
-    private double getValueFromGrid(Grid grid, Path path, int x, int y) {
-        int gridValue = grid.get(x, y);
-        if (path.hasPoint(grid, x, y)) {
-            // been there
-            int distanceInPath = path.getDistanceInPath(x, y);
-            double increment = gridValue * timeValueFactor;
-
-            return Math.min((distanceInPath - 1) * increment, gridValue);
-        } else {
-            return gridValue;
-        }
     }
 }
