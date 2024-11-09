@@ -15,6 +15,7 @@ public class OptimalPathFinder {
     // paths to be considered, sorted by value
     private final PriorityQueue<Path> paths = new PriorityQueue<>();
 
+    /// can likely be replaced by Set<Integer> (path hashcode) --> takes up less memory
     private final Set<Path> takenPaths = new HashSet<>();
 
     /**

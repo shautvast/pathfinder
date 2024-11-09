@@ -6,15 +6,18 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a square grid. Integer values at position x,y
+ */
 public record Grid(List<List<Integer>> grid) {
     private static final double timeValueFactor = .2;
 
-    public static Grid fromFile(String resource)  {
+    public static Grid fromFile(String resource) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(Grid.class.getClassLoader().getResourceAsStream(resource)));
             String line;
             List<List<Integer>> rows = new ArrayList<>();
-            while ((line=reader.readLine())!=null){
+            while ((line = reader.readLine()) != null) {
                 String[] values = line.split(" ");
                 List<Integer> row = new ArrayList<>(values.length);
                 for (int i = 0; i < values.length; i++) {
@@ -28,19 +31,18 @@ public record Grid(List<List<Integer>> grid) {
         }
     }
 
-    public int getInitialValue(int x, int y){
+    public int getInitialValue(int x, int y) {
         return grid.get(y).get(x);
     }
 
     //assumes square
-    public int getWidth(){
+    public int getWidth() {
         return grid.size();
     }
 
     /**
-     * de waarde van een punt x,y wordt bepaald door de beginwaarde, tenzij we er al geweest zijn
-     * dan telt de tijd sinds we er geweest zijn = afstand in sindsdien afgelegd pad
-     * de waarde is rechtevenredig met de afstand
+     * The value of a point is the initialValue unless it has been visited (in a path)
+     * Immediately after visiting its value is 0 and in steady pace (timeValueFactor) increases with time.
      */
     public double getCurrentValue(Path path, int x, int y) {
         int gridValue = getInitialValue(x, y);

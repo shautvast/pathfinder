@@ -4,13 +4,16 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 
+/**
+ * Represents a path in a grid, consisting of a sequence of points.
+ */
 public class Path implements Comparable<Path> {
-    // beide bevatten de al afgelegde punten
+    //both these collections contain the current points in the path
 
-    // points is bedoeld om door de punten te lopen
+    // points is meant to traverse the points
     public final ArrayList<Point> points = new ArrayList<>();
 
-    // trodden is bedoeld om zo snel mogelijk vast te stellen of we al op het punt geweest zijn
+    // the purpose of trodden is to quickly determine if a point is part of this path
     private final HashSet<Integer> trodden = new HashSet<>();
 
     private Path() {
