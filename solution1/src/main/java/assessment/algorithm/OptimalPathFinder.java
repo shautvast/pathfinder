@@ -9,6 +9,7 @@ import java.util.*;
  * outstanding questions:
  * * is a cell of (initial) value 0 equally valuable as a cell just occupied?
  * -> probably, what is the chance that you find a 'treasure' behind it, that you would have not found via an alternative path?
+ * * what about a path that has to end at start position?
  */
 public class OptimalPathFinder {
 
@@ -53,6 +54,7 @@ public class OptimalPathFinder {
 
                 // next path to evaluate
                 path = paths.peek();
+                assert path != null; // priorityqueue does not allow nulls
             }
 
             Point currentPos = path.getHead();
