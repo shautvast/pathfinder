@@ -14,14 +14,15 @@ public record Grid(List<List<Integer>> grid) {
 
     public static Grid fromFile(String resource) {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(Grid.class.getClassLoader().getResourceAsStream(resource)));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    Grid.class.getClassLoader().getResourceAsStream(resource)));
             String line;
             List<List<Integer>> rows = new ArrayList<>();
             while ((line = reader.readLine()) != null) {
                 String[] values = line.split(" ");
                 List<Integer> row = new ArrayList<>(values.length);
-                for (int i = 0; i < values.length; i++) {
-                    row.add(Integer.parseInt(values[i]));
+                for (String value : values) {
+                    row.add(Integer.parseInt(value));
                 }
                 rows.add(row);
             }

@@ -87,29 +87,27 @@ public class OptimalPathFinder {
                     newDirections.add(Point.create(g, path, x - 1, y + 1));
             }
 
-            if (!newDirections.isEmpty()) {
-                boolean pointsAdded = false;
-                for (Point p : newDirections) {
-                    // is it worthwile going there?
-                    if (p.value > 0) { // use (higher) cutoff point?
-                        // create a new Path based on the current
-                        Path newPath = path.copy();
+            boolean pointsAdded = false;
+            for (Point p : newDirections) {
+                // is it worthwile going there?
+                if (p.value > 0) { // use (higher) cutoff point?
+                    // create a new Path based on the current
+                    Path newPath = path.copy();
 
-                        // add the new point
-                        newPath.add(g, p);
-                        if (!takenPaths.contains(newPath)) {
-                            paths.add(newPath);
-                            takenPaths.add(newPath);
-                            pointsAdded = true;
-                        }
+                    // add the new point
+                    newPath.add(g, p);
+                    if (!takenPaths.contains(newPath)) {
+                        paths.add(newPath);
+                        takenPaths.add(newPath);
+                        pointsAdded = true;
                     }
                 }
-                if (!pointsAdded) {
-                    // dead end, evict
-                    Path ended = paths.poll();
-                    if (ended != null && ended.value() > max.value()) {
-                        max = ended;
-                    }
+            }
+            if (!pointsAdded) {
+                // dead end, evict
+                Path ended = paths.poll();
+                if (ended != null && ended.value() > max.value()) {
+                    max = ended;
                 }
             }
         }
