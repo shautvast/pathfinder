@@ -5,8 +5,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+const RECOVERY_FACTOR: f32 = 0.01;
+
 #[allow(non_snake_case)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Grid {
     data: Vec<Vec<u16>>,
     // keep track of every point that has been hit at some time
@@ -45,17 +47,24 @@ impl Grid {
         }
     }
 
+    pub fn get_initial_value(&self, x: u16, y: u16) -> f32 {
+        *(self.data.get(y as usize).unwrap().get(x as usize).unwrap()) as f32
+    }
+
     pub fn get_value(&self, x: u16, y: u16, time: usize) -> f32 {
         let hit = self.hits.get(&(x, y));
 
-        let initial_value = *(self.data.get(y as usize).unwrap().get(x as usize).unwrap()) as f32;
+        let initial_value = self.get_initial_value(x, y);
 
         if let Some(hit_times) = hit {
             for t in hit_times.iter().rev() {
                 if time > *t {
                     let elapsed_since_hit = (time - *t) as f32;
-
-                    return f32::min(elapsed_since_hit * initial_value * 0.1, initial_value);
+                    let value = f32::min(
+                        elapsed_since_hit * initial_value * RECOVERY_FACTOR,
+                        initial_value,
+                    );
+                    return value;
                 }
             }
             0.0
@@ -75,7 +84,7 @@ impl Grid {
 
 #[derive(Debug, Clone)]
 pub struct Path {
-    points: LinkedList<Point>,
+    pub points: LinkedList<Point>,
     pub value: f32,
 }
 
@@ -197,4 +206,10 @@ mod test {
         assert_eq!(grid.get_value(0, 0, 0), 0.0);
         assert_eq!(grid.get_value(0, 1, 0), 1.0);
     }
+}
+
+#[derive(Debug)]
+pub struct PathsResult {
+    pub paths: Vec<Path>,
+    pub overall_score: f32,
 }
