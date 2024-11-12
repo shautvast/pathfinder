@@ -1,8 +1,7 @@
 use std::{
     cmp::Ordering,
-    collections::{BTreeSet, HashMap, LinkedList},
+    collections::{HashMap, HashSet, LinkedList},
     hash::{Hash, Hasher},
-    sync::{Arc, Mutex},
 };
 
 const RECOVERY_FACTOR: f32 = 0.1;
@@ -12,9 +11,9 @@ const RECOVERY_FACTOR: f32 = 0.1;
 pub struct Grid {
     data: Vec<Vec<u16>>,
     // keep track of every point that has been hit at some time
-    hits: HashMap<(u16, u16), BTreeSet<usize>>, // TreeSet<usize> is integer times that point has been visited.
-                                                // Must always be sorted and could probably be a single int
-                                                // (keep track of last time hit)
+    hits: HashMap<(u16, u16), usize>, // TreeSet<usize> is integer times that point has been visited.
+                                      // Must always be sorted and could probably be a single int
+                                      // (keep track of last time hit)
 }
 
 impl Grid {
@@ -51,30 +50,47 @@ impl Grid {
         *(self.data.get(y as usize).unwrap().get(x as usize).unwrap()) as f32
     }
 
-    pub fn get_value(&self, x: u16, y: u16, time: usize) -> f32 {
-        let hit = self.hits.get(&(x, y));
-
+    /// get the value of a point on the grid
+    /// 1. initial value, given by the datafile
+    /// 2. value possibly updated by a previous drone in the multiple drone scenario
+    /// 3. value possibly updated by the drone itself, when it gets to a point that it already occupied
+    pub fn get_value(&self, x: u16, y: u16, path: Option<&Path>) -> f32 {
+        let pathlen = path.map_or(0, |p| p.length());
         let initial_value = self.get_initial_value(x, y);
 
-        if let Some(hit_times) = hit {
-            for t in hit_times.iter().rev() {
-                if time > *t {
-                    let elapsed_since_hit = (time - *t) as f32;
-                    let value = f32::min(
-                        elapsed_since_hit * initial_value * RECOVERY_FACTOR,
-                        initial_value,
-                    );
-                    return value;
-                }
+        // 1.
+        let mut value = initial_value;
+
+        // 2.
+        let hit_time = self.hits.get(&(x, y));
+        if let Some(hit_time) = hit_time {
+            if pathlen > *hit_time {
+                // +1 because we are in the process of adding a new point to the path
+                let elapsed_since_hit = (pathlen + 1 - hit_time) as f32;
+                value = f32::min(
+                    elapsed_since_hit * initial_value * RECOVERY_FACTOR,
+                    initial_value,
+                );
             }
-            0.0
-        } else {
-            initial_value
         }
+
+        // 3.
+        if let Some(path) = path {
+            let maybe_hit = path.points_lookup.get(&(x, y));
+            if let Some(hit_time) = maybe_hit {
+                let elapsed_since_hit = (path.points.len() - hit_time) as f32;
+                value = f32::min(
+                    elapsed_since_hit * initial_value * RECOVERY_FACTOR,
+                    initial_value,
+                );
+            }
+        }
+
+        value
     }
 
     pub fn hit(&mut self, x: u16, y: u16, time: usize) {
-        self.hits.entry((x, y)).or_default().insert(time);
+        self.hits.insert((x, y), time);
     }
 
     pub fn size(&self) -> u16 {
@@ -85,15 +101,13 @@ impl Grid {
 #[derive(Debug, Clone)]
 pub struct Path {
     pub points: LinkedList<Point>,
+    pub points_lookup: HashMap<(u16, u16), usize>,
     pub value: f32,
 }
 
 impl Path {
-    pub fn new(grid: Arc<Mutex<Grid>>, initial_x: u16, initial_y: u16) -> Self {
-        let mut points = LinkedList::new();
-        let mut lock = grid.lock();
-        let grid = lock.as_mut().unwrap();
-        let value = grid.get_value(initial_x, initial_y, 0);
+    pub fn new(grid: &Grid, initial_x: u16, initial_y: u16) -> Self {
+        let value = grid.get_value(initial_x, initial_y, None);
 
         let p = Point {
             x: initial_x,
@@ -101,8 +115,16 @@ impl Path {
             value,
         };
 
+        let mut points = LinkedList::new();
         points.push_front(p);
-        Self { points, value }
+        let mut points_lookup = HashMap::new();
+        points_lookup.insert((initial_x, initial_y), 0);
+
+        Self {
+            points,
+            value,
+            points_lookup,
+        }
     }
 
     // length = age of the path
@@ -204,8 +226,8 @@ mod test {
     #[test]
     pub fn test() {
         let grid = Grid::new(20);
-        assert_eq!(grid.get_value(0, 0, 0), 0.0);
-        assert_eq!(grid.get_value(0, 1, 0), 1.0);
+        assert_eq!(grid.get_value(0, 0, None), 0.0);
+        assert_eq!(grid.get_value(0, 1, None), 1.0);
     }
 }
 

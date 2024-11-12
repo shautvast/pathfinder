@@ -21,4 +21,5 @@ running:
 *solution2*
 * written in rust
 * single and multiple drones
+* uses basically the same method, but after a definitive flight path is calculated, the grid is updated for the next drone
 * see tests and main for validity of the algorithm

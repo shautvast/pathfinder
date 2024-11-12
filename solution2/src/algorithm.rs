@@ -3,10 +3,6 @@ use rand::Rng;
 use std::collections::HashSet;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::time::SystemTime;
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
 
 #[allow(non_snake_case)]
 pub fn find_optimal_path_for_n_drones(
@@ -16,25 +12,26 @@ pub fn find_optimal_path_for_n_drones(
     t: usize,
     T: u128,
 ) -> PathsResult {
-    let arc = Arc::new(Mutex::new(grid));
+    // multiple drones are calculated one after another
+    // grid hits must be updated for the next drone after the optimal for the previous has been calculated
 
-    let mut handles = vec![];
-
+    let mut paths = vec![];
+    let mut grid = grid.clone();
     for _ in 0..ndrones {
-        let gridref = Arc::clone(&arc);
-
+        let mut current_grid = grid.clone();
         let mut rng = rand::thread_rng();
         // start at random position
         let x: u16 = rng.gen_range(0..N);
         let y: u16 = rng.gen_range(0..N);
-        // start new thread for a single drone
-        let handle = thread::spawn(move || find_optimal_path(gridref, N, t, T, x, y));
-        handles.push(handle);
-    }
+        // divide max algorithm time by number of drones
+        let time_per_drone = T / ndrones as u128;
+        let optimal = find_optimal_path(&mut current_grid, N, t, time_per_drone, x, y);
 
-    let mut paths = vec![];
-    for handle in handles {
-        paths.push(handle.join().unwrap());
+        // update the grid to the lastes state
+        for (index, p) in optimal.points.iter().enumerate() {
+            grid.hit(p.x, p.y, index);
+        }
+        paths.push(optimal);
     }
 
     let overall_score = paths.iter().map(|p| p.value).sum();
@@ -52,19 +49,12 @@ pub fn find_optimal_path_for_n_drones(
 /// T max duration of the algorithm
 /// x,y drone start position in the grid
 #[allow(non_snake_case)]
-pub fn find_optimal_path(
-    grid: Arc<Mutex<Grid>>,
-    N: u16,
-    t: usize,
-    T: u128,
-    x: u16,
-    y: u16,
-) -> Path {
+pub fn find_optimal_path(grid: &mut Grid, N: u16, t: usize, T: u128, x: u16, y: u16) -> Path {
     let mut paths_to_consider: Vec<Path> = Vec::new();
     let mut taken_paths: HashSet<u64> = HashSet::new();
 
     // starting point
-    let path = Path::new(Arc::clone(&grid), x, y);
+    let path = Path::new(grid, x, y);
 
     // always current max
     let mut max: Path = path.clone(); // sorry
@@ -101,97 +91,90 @@ pub fn find_optimal_path(
 
         // create a list of directions to take
         new_directions.clear();
-        {
-            let arc = Arc::clone(&grid);
-            let mut lock = arc.lock();
-            let grid = lock.as_mut().unwrap();
-            if y > 0 {
-                new_directions.push(Point::new(
-                    x,
-                    y - 1,
-                    grid.get_value(x, y - 1, current_path.length() + 1),
-                ));
-                if x < N - 1 {
-                    new_directions.push(Point::new(
-                        x + 1,
-                        y - 1,
-                        grid.get_value(x + 1, y - 1, current_path.length() + 1),
-                    ));
-                }
-            }
-
-            if x > 0 {
-                new_directions.push(Point::new(
-                    x - 1,
-                    y,
-                    grid.get_value(x - 1, y, current_path.length() + 1),
-                ));
-                if y > 0 {
-                    new_directions.push(Point::new(
-                        x - 1,
-                        y - 1,
-                        grid.get_value(x - 1, y - 1, current_path.length() + 1),
-                    ));
-                }
-            }
-
+        if y > 0 {
+            new_directions.push(Point::new(
+                x,
+                y - 1,
+                grid.get_value(x, y - 1, Some(&current_path)),
+            ));
             if x < N - 1 {
                 new_directions.push(Point::new(
                     x + 1,
-                    y,
-                    grid.get_value(x + 1, y, current_path.length() + 1),
+                    y - 1,
+                    grid.get_value(x + 1, y - 1, Some(&current_path)),
                 ));
-                if y < N - 1 {
-                    new_directions.push(Point::new(
-                        x + 1,
-                        y + 1,
-                        grid.get_value(x + 1, y + 1, current_path.length() + 1),
-                    ));
-                }
             }
+        }
 
+        if x > 0 {
+            new_directions.push(Point::new(
+                x - 1,
+                y,
+                grid.get_value(x - 1, y, Some(&current_path)),
+            ));
+            if y > 0 {
+                new_directions.push(Point::new(
+                    x - 1,
+                    y - 1,
+                    grid.get_value(x - 1, y - 1, Some(&current_path)),
+                ));
+            }
+        }
+
+        if x < N - 1 {
+            new_directions.push(Point::new(
+                x + 1,
+                y,
+                grid.get_value(x + 1, y, Some(&current_path)),
+            ));
             if y < N - 1 {
                 new_directions.push(Point::new(
-                    x,
+                    x + 1,
                     y + 1,
-                    grid.get_value(x, y + 1, current_path.length() + 1),
+                    grid.get_value(x + 1, y + 1, Some(&current_path)),
                 ));
-                if x > 0 {
-                    new_directions.push(Point::new(
-                        x - 1,
-                        y + 1,
-                        grid.get_value(x - 1, y + 1, current_path.length() + 1),
-                    ));
+            }
+        }
+
+        if y < N - 1 {
+            new_directions.push(Point::new(
+                x,
+                y + 1,
+                grid.get_value(x, y + 1, Some(&current_path)),
+            ));
+            if x > 0 {
+                new_directions.push(Point::new(
+                    x - 1,
+                    y + 1,
+                    grid.get_value(x - 1, y + 1, Some(&current_path)),
+                ));
+            }
+        }
+
+        let mut points_added = false;
+        for point in new_directions.iter() {
+            if point.value > 0.0 {
+                let mut new_path = current_path.clone();
+                new_path.add(point.clone());
+
+                let mut s = DefaultHasher::new();
+                new_path.hash(&mut s);
+                let hash = s.finish();
+
+                if !taken_paths.contains(&hash) {
+                    points_added = true;
+                    grid.hit(point.x, point.y, new_path.length());
+                    paths_to_consider.push(new_path);
+                    taken_paths.insert(hash);
                 }
             }
-
-            let mut points_added = false;
-            for point in new_directions.iter() {
-                if point.value > 0.0 {
-                    let mut new_path = current_path.clone();
-                    new_path.add(point.clone());
-
-                    let mut s = DefaultHasher::new();
-                    new_path.hash(&mut s);
-                    let hash = s.finish();
-
-                    if !taken_paths.contains(&hash) {
-                        points_added = true;
-                        grid.hit(point.x, point.y, new_path.length());
-                        paths_to_consider.push(new_path);
-                        taken_paths.insert(hash);
-                    }
-                }
+        }
+        if !points_added {
+            // dead end, evict
+            let ended = paths_to_consider.pop().unwrap();
+            if ended.value > max.value {
+                max = ended;
             }
-            if !points_added {
-                // dead end, evict
-                let ended = paths_to_consider.pop().unwrap();
-                if ended.value > max.value {
-                    max = ended;
-                }
-            }
-
-            //drop lock
         }
 
         // continue?
@@ -211,8 +194,9 @@ mod tests {
 
     #[test]
     pub fn test_single_drone() {
-        let grid = Grid::new(20);
-        let opt = find_optimal_path(Arc::new(Mutex::new(grid.clone())), 100, 10, 1000, 9, 9);
+        let mut grid = Grid::new(100);
+        // values for x and y are chosen so that a loop must occur
+        let opt = find_optimal_path(&mut grid, 20, 20, 1000, 9, 9);
 
         let mut all_points: HashSet<Point> = HashSet::new();
         let mut loop_in_path = false;
@@ -225,12 +209,14 @@ mod tests {
             all_points.insert(point.clone());
         }
         if loop_in_path {
-            //println!("check"); //verify that this occurs
+            println!("check"); //verify that this occurs
             let max_sum: f32 = opt
                 .points
                 .iter()
                 .map(|p| grid.get_initial_value(p.x, p.y))
                 .sum();
+            println!("max sum {:?}, opt path {:?}", max_sum, opt);
+            // verify that the grid value was updated because of the hit
             assert!(max_sum > opt.value());
         }
     }
