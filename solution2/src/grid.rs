@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-const RECOVERY_FACTOR: f32 = 0.01;
+const RECOVERY_FACTOR: f32 = 0.1;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone)]
@@ -105,6 +105,7 @@ impl Path {
         Self { points, value }
     }
 
+    // length = age of the path
     pub fn length(&self) -> usize {
         self.points.len()
     }

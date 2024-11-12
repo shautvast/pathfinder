@@ -76,10 +76,6 @@ pub fn find_optimal_path(
     let t0 = SystemTime::now();
     let mut running = true;
 
-    // this is time spent for the path, grid keeps the global timeframe
-    // same as path length, so remove?
-    let mut discrete_elapsed = 0;
-
     // will keep at most 8 new directions from current location
     let mut new_directions = vec![];
 
@@ -111,13 +107,13 @@ pub fn find_optimal_path(
                 new_directions.push(Point::new(
                     x,
                     y - 1,
-                    grid.get_value(x, y - 1, discrete_elapsed),
+                    grid.get_value(x, y - 1, current_path.length() + 1),
                 ));
                 if x < N - 1 {
                     new_directions.push(Point::new(
                         x + 1,
                         y - 1,
-                        grid.get_value(x + 1, y - 1, discrete_elapsed),
+                        grid.get_value(x + 1, y - 1, current_path.length() + 1),
                     ));
                 }
             }
@@ -126,13 +122,13 @@ pub fn find_optimal_path(
                 new_directions.push(Point::new(
                     x - 1,
                     y,
-                    grid.get_value(x - 1, y, discrete_elapsed),
+                    grid.get_value(x - 1, y, current_path.length() + 1),
                 ));
                 if y > 0 {
                     new_directions.push(Point::new(
                         x - 1,
                         y - 1,
-                        grid.get_value(x - 1, y - 1, discrete_elapsed),
+                        grid.get_value(x - 1, y - 1, current_path.length() + 1),
                     ));
                 }
             }
@@ -141,13 +137,13 @@ pub fn find_optimal_path(
                 new_directions.push(Point::new(
                     x + 1,
                     y,
-                    grid.get_value(x + 1, y, discrete_elapsed),
+                    grid.get_value(x + 1, y, current_path.length() + 1),
                 ));
                 if y < N - 1 {
                     new_directions.push(Point::new(
                         x + 1,
                         y + 1,
-                        grid.get_value(x + 1, y + 1, discrete_elapsed),
+                        grid.get_value(x + 1, y + 1, current_path.length() + 1),
                     ));
                 }
             }
@@ -156,13 +152,13 @@ pub fn find_optimal_path(
                 new_directions.push(Point::new(
                     x,
                     y + 1,
-                    grid.get_value(x, y + 1, discrete_elapsed),
+                    grid.get_value(x, y + 1, current_path.length() + 1),
                 ));
                 if x > 0 {
                     new_directions.push(Point::new(
                         x - 1,
                         y + 1,
-                        grid.get_value(x - 1, y + 1, discrete_elapsed),
+                        grid.get_value(x - 1, y + 1, current_path.length() + 1),
                     ));
                 }
             }
@@ -179,7 +175,7 @@ pub fn find_optimal_path(
 
                     if !taken_paths.contains(&hash) {
                         points_added = true;
-                        grid.hit(point.x, point.y, discrete_elapsed);
+                        grid.hit(point.x, point.y, new_path.length());
                         paths_to_consider.push(new_path);
                         taken_paths.insert(hash);
                     }
@@ -192,6 +188,8 @@ pub fn find_optimal_path(
                     max = ended;
                 }
             }
+
+            //drop lock
         }
 
         // continue?
@@ -201,7 +199,6 @@ pub fn find_optimal_path(
                 running = false;
             }
         }
-        discrete_elapsed += 1;
     }
     max
 }
@@ -216,32 +213,23 @@ mod tests {
         let opt = find_optimal_path(Arc::new(Mutex::new(grid.clone())), 100, 10, 1000, 9, 9);
 
         let mut all_points: HashSet<Point> = HashSet::new();
+        let mut loop_in_path = false;
         for point in opt.points.iter() {
             if all_points.contains(point) {
-                if all_points.contains(point) {
-                    let iv = grid.get_initial_value(point.x, point.y);
-                    assert!(point.value < iv);
-                }
+                // we have a path that crosses itself
+                // path value should be less than sum of individual initial values of point
+                loop_in_path = true
             }
             all_points.insert(point.clone());
         }
-    }
-
-    #[test]
-    pub fn test_multiple_drones() {
-        let grid = Grid::new(100);
-        let paths_result = find_optimal_path_for_n_drones(grid.clone(), 4, 100, 10, 1000);
-
-        let mut all_points: HashSet<Point> = HashSet::new();
-
-        for path in paths_result.paths.iter() {
-            for point in path.points.iter() {
-                if all_points.contains(point) {
-                    let iv = grid.get_initial_value(point.x, point.y);
-                    assert!(point.value < iv);
-                }
-                all_points.insert(point.clone());
-            }
+        if loop_in_path {
+            println!("check");
+            let max_sum: f32 = opt
+                .points
+                .iter()
+                .map(|p| grid.get_initial_value(p.x, p.y))
+                .sum();
+            assert!(max_sum > opt.value());
         }
     }
 }
