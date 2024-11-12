@@ -17,6 +17,6 @@ running:
 * in the console type `fly` [enter]
 
 *solution2*
-*written in rust
-*single and multiple drones
-*see tests and main for validity of the algorithm
+* written in rust
+* single and multiple drones
+* see tests and main for validity of the algorithm
