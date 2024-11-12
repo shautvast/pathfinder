@@ -10,7 +10,7 @@
 * the algorithm is embedded in a rest api
 * it also has a html canvas frontend that draws the path on the grid
 
-installation:
+running:
 * install jdk22, and apache maven
 * run `mvn spring-boot:run`
 * go to http://localhost:8080
