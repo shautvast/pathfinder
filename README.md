@@ -14,7 +14,7 @@ running:
 * install jdk22, and apache maven
 * run `mvn spring-boot:run`
 * go to http://localhost:8080
-* in the console type `fly` [enter]
+* in the console in the ui type `fly` [enter]
 
 *solution2*
 * written in rust
