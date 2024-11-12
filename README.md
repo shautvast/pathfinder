@@ -15,6 +15,9 @@ running:
 * run `mvn spring-boot:run`
 * go to http://localhost:8080
 * in the console in the ui type `fly` [enter]
+* input values for the algorithm can be updated, eg `T=2000'
+* drone always flies from the center. 
+* use `clear` to refresh
 
 *solution2*
 * written in rust
