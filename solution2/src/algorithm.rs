@@ -81,12 +81,14 @@ pub fn find_optimal_path(
 
     let mut current_path;
     while running && !paths_to_consider.is_empty() {
-        paths_to_consider.sort();
+        // would have liked a list like datastructure that is guaranteed to be sorted
+        // BTreeSet would be nice, but equals/hash/cmp calls would be unneeded overhead
+        paths_to_consider.sort(); // but this is also overhead compared to BTreeSet
         current_path = paths_to_consider.last().unwrap().clone(); // assert = Some
 
         // evict paths that are of max len
         while current_path.length() >= t {
-            _ = paths_to_consider.pop();
+            _ = paths_to_consider.pop(); // discards element that = current_path
             if current_path.value() > max.value() {
                 max = current_path.clone(); // sorry
             }
