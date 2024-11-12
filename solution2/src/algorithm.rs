@@ -86,7 +86,7 @@ pub fn find_optimal_path(
 
         // evict paths that are of max len
         while current_path.length() >= t {
-            _ = paths_to_consider.remove(paths_to_consider.len() - 1);
+            _ = paths_to_consider.pop();
             if current_path.value() > max.value() {
                 max = current_path.clone(); // sorry
             }
@@ -183,7 +183,7 @@ pub fn find_optimal_path(
             }
             if !points_added {
                 // dead end, evict
-                let ended = paths_to_consider.remove(paths_to_consider.len() - 1);
+                let ended = paths_to_consider.pop().unwrap();
                 if ended.value > max.value {
                     max = ended;
                 }
@@ -223,7 +223,7 @@ mod tests {
             all_points.insert(point.clone());
         }
         if loop_in_path {
-            println!("check");
+            //println!("check"); //verify that this occurs
             let max_sum: f32 = opt
                 .points
                 .iter()
